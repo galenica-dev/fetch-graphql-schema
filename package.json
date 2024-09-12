@@ -14,7 +14,7 @@
     "type": "git",
     "url": "https://github.com/galenica-dev/fetch-graphql-schema.git"
   },
-  "keywords": ["graphql", "schema", "download", "fetch", "introspection", "relay"],
+  "keywords": ["graphql", "schema", "download", "fetch", "introspection", "relay", "cli", "command-line", "tool"],
   "author": "Galenica Development Team",
   "license": "ISC",
   "devDependencies": {
