@@ -1,6 +1,6 @@
 {
   "name": "@galenica-dev/fetch-graphql-schema",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A simple command-line tool to download GraphQL schemas for local use.",
   "main": "index.js",
   "bin": {
