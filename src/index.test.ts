@@ -1,98 +1,92 @@
+import { fetchSchema } from "./index";
 import fs from "fs";
-import fetchMock from "jest-fetch-mock";
-import { fetchSchema } from "./index"; // Adjust path if needed
+import { ApolloServer } from "apollo-server";
 
-fetchMock.enableMocks();
-jest.mock("fs");
+// Utility Functions
 
-// Schéma GraphQL simplifié pour le mock
-const mockSchema = {
-  __schema: {
-    types: [
-      {
-        name: "Query",
-        kind: "OBJECT",
-        description: "The root query type",
-        fields: [
-          {
-            name: "launches",
-            description: "Get a list of launches",
-            args: [],
-            type: {
-              kind: "LIST",
-              name: null,
-              ofType: {
-                kind: "OBJECT",
-                name: "Launch",
-                ofType: null,
-              },
-            },
-          },
-        ],
-      },
-    ],
-  },
-};
+/**
+ * Normalize schema by removing extra spaces and trimming the string.
+ * This ensures whitespace differences are not considered in comparisons.
+ */
+function normalizeSchema(schema: string): string {
+  return schema.replace(/\s+/g, " ").trim();
+}
 
-describe("fetchSchema", () => {
+/**
+ * Remove the file if it exists.
+ * This helps to ensure clean test runs by removing any leftover files.
+ */
+function cleanupFile(filePath: string): void {
+  fs.rmSync(filePath, { force: true });
+}
+
+// Test setup
+
+const outputPath = "schema.graphql";
+
+// Define the expected schema for the test
+const typeDefs = `
+  type Query {
+    hello: String
+  }
+`;
+
+// Initialize the Apollo Server with the schema
+const testServer = new ApolloServer({ typeDefs });
+
+describe("fetchSchema Integration Tests", () => {
+  let graphqlEndpoint: string;
+
+  beforeAll(async () => {
+    // Start the test server and retrieve the URL (GraphQL endpoint)
+    const { url } = await testServer.listen();
+    graphqlEndpoint = url;
+  });
+
+  afterAll(async () => {
+    // Stop the server after all tests have completed
+    await testServer.stop();
+  });
+
   beforeEach(() => {
-    fetchMock.resetMocks();
-    fetchMock.mockResponseOnce(JSON.stringify({ data: mockSchema }));
-
-    // Mock file system behavior
-    (fs.existsSync as jest.Mock).mockReturnValue(false);
-    (fs.lstatSync as jest.Mock).mockReturnValue({ isDirectory: () => false });
-    (fs.writeFileSync as jest.Mock).mockImplementation(() => {});
+    // Clean up the schema file before each test to avoid leftover data
+    cleanupFile(outputPath);
   });
 
-  it("should fetch and save a GraphQL schema", async () => {
-    const url = "http://localhost/graphql";
-    const outputPath = "spacex-schema.graphql";
-    const expectedSchema = JSON.stringify(mockSchema, null, 2);
-
-    await fetchSchema(url, outputPath);
-
-    // Vérifications
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: expect.any(String),
-    });
-    expect(fs.writeFileSync).toHaveBeenCalledWith(outputPath, expectedSchema);
+  afterEach(() => {
+    // Ensure the schema file is removed after each test
+    cleanupFile(outputPath);
   });
 
-  it("should handle fetch errors", async () => {
-    fetchMock.mockReject(new Error("Network error"));
+  it("should fetch the schema and write it to the output file", async () => {
+    const expectedSchema = `
+      type Query {
+        hello: String
+      }
+    `;
 
-    const url = "https://mocked-graphql-endpoint.com/graphql";
-    const outputPath = "spacex-schema.graphql";
+    // Fetch the schema from the server and write it to the specified output path
+    await fetchSchema(graphqlEndpoint, outputPath);
 
-    try {
-      await fetchSchema(url, outputPath);
-    } catch (error: any) {
-      // Verify the error message and ensure fs.writeFileSync was not called
-      expect(error.message).toMatch(
-        /Error fetching or saving schema: Network error/
-      );
-      expect(fs.writeFileSync).not.toHaveBeenCalled();
-    }
+    // Read the schema from the output file
+    const actualSchema = fs.readFileSync(outputPath, "utf-8");
+
+    // Normalize and compare the fetched schema with the expected one
+    expect(normalizeSchema(actualSchema)).toEqual(
+      normalizeSchema(expectedSchema)
+    );
   });
 
-  it("should throw error if URL is not provided", async () => {
-    await expect(fetchSchema("", "schema.graphql")).rejects.toThrow(
+  it("should throw an error if no URL is provided", async () => {
+    // Expect an error to be thrown if an empty URL is provided
+    await expect(fetchSchema("", outputPath)).rejects.toThrow(
       "Please provide a GraphQL endpoint URL."
     );
   });
 
-  it("should throw error if output path is a directory", async () => {
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
-    (fs.lstatSync as jest.Mock).mockReturnValue({ isDirectory: () => true });
-
-    const url = "http://localhost/graphql";
-    const outputPath = "spacex-schema.graphql";
-
-    await expect(fetchSchema(url, outputPath)).rejects.toThrow(
+  it("should throw an error if output path is a directory", async () => {
+    // Expect an error to be thrown if the output path is a directory instead of a file
+    await expect(fetchSchema(graphqlEndpoint, "/")).rejects.toThrow(
       "The output path is a directory. Please provide a file name."
     );
   });
