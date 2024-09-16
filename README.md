@@ -50,7 +50,9 @@ If no output path is specified, the default output file will be `schema.graphql`
 
 ### Error Handling
 
-- If the provided URL is missing or invalid, an error will be thrown: `Please provide a valid GraphQL endpoint URL.`
+- If the provided URL is missing or invalid, an error will be thrown:
+  - (missing)`Please provide a valid GraphQL endpoint URL.`
+  - (invalid)`Invalid GraphQL endpoint URL.`
 - If the output path is a directory instead of a file, an error will be thrown: `The output path is a directory. Please provide a file name.`
 
 ## Sponsorship

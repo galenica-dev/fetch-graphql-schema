@@ -82,6 +82,10 @@ describe("fetchSchema Integration Tests", () => {
     await expect(fetchSchema("", outputPath)).rejects.toThrow(
       "Please provide a GraphQL endpoint URL."
     );
+
+    await expect(fetchSchema("_not/an.url", outputPath)).rejects.toThrow(
+      "Invalid GraphQL endpoint URL."
+    );
   });
 
   it("should throw an error if output path is a directory", async () => {

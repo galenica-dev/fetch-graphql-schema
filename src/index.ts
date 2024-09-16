@@ -45,6 +45,12 @@ function validateInputs(url: string, outputPath: string): void {
     throw new Error("Please provide a GraphQL endpoint URL.");
   }
 
+  try {
+    new URL(url); // Try to construct a URL object; will throw if invalid
+  } catch (error) {
+    throw new Error("Invalid GraphQL endpoint URL.");
+  }
+
   if (fs.existsSync(outputPath) && fs.lstatSync(outputPath).isDirectory()) {
     throw new Error(
       "The output path is a directory. Please provide a file name."
